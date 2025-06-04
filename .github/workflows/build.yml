@@ -50,7 +50,12 @@ jobs:
         env:
           PYINSTALLER_SKIP_CODE_SIGNING: 1
         run: |
-          pyinstaller --onedir --collect-all playwright --add-data "browsers:browsers" --osx-no-sign login.py
+          pyinstaller --onedir --collect-all playwright login.py
+
+      - name: Copy browsers folder on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          cp -r browsers dist/login/browsers
 
       - name: Build executable with PyInstaller on Linux/Windows
         if: matrix.os != 'macos-latest'
