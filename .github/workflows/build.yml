@@ -45,9 +45,15 @@ jobs:
         run: |
           PLAYWRIGHT_BROWSERS_PATH=./browsers python -m playwright install --with-deps
 
-      - name: Build executable with PyInstaller
+      - name: Build executable with PyInstaller on macOS
+        if: matrix.os == 'macos-latest'
         env:
           PYINSTALLER_SKIP_CODE_SIGNING: 1
+        run: |
+          pyinstaller --onedir --collect-all playwright --add-data "browsers:browsers" --osx-no-sign login.py
+
+      - name: Build executable with PyInstaller on Linux/Windows
+        if: matrix.os != 'macos-latest'
         run: |
           pyinstaller --onedir --collect-all playwright --add-data "browsers:browsers" login.py
 
