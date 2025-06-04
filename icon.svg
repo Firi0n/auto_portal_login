@@ -1,0 +1,16 @@
+<svg width="128" height="128" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="glossyArrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E6731A" />
+      <stop offset="100%" stop-color="#B84E00" />
+    </linearGradient>
+  </defs>
+
+  <!-- Lucchetto con contorni meno arrotondati e più sottili -->
+  <rect x="7" y="11" width="10" height="8" rx="2" ry="2" stroke="#C75A2F" stroke-width="2" fill="rgba(199, 90, 47, 0.15)"/>
+  <path d="M9 11V7a3 3 0 0 1 6 0v4" stroke="#C75A2F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Freccia lucida perfetta -->
+  <line x1="12.8" y1="15" x2="16.5" y2="11.2" stroke="url(#glossyArrow)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="16.5" y1="11.2" x2="12.8" y2="8.5" stroke="url(#glossyArrow)" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

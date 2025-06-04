@@ -1,16 +1,16 @@
 name: Build and Release
 
 on:
-  # Trigger on tag push (e.g., v1.0.0)
+  # Trigger workflow when a tag matching the pattern (e.g., v1.0.0) is pushed
   push:
     tags:
       - "v*.*.*"
 
-  # Allow manual trigger with a required input
+  # Allow manual trigger of the workflow with a required tag_name input
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Tag version (e.g., v1.2.3)"
+        description: "Tag version to release (e.g., v1.2.3)"
         required: true
 
 jobs:
@@ -21,26 +21,26 @@ jobs:
       PYTHONIOENCODING: utf-8
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest] # Define OS matrix for cross-platform builds
+        os: [ubuntu-latest, windows-latest, macos-latest] # Run build on multiple OS platforms
 
     steps:
-      # Checkout the source code from the repository
+      # Checkout the latest code from the repository
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      # Set up the desired Python version
+      # Set up Python 3.11 environment
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # Run the custom Python build script (creates venv, installs deps, builds app)
+      # Run the build script that creates a virtual environment, installs dependencies, and builds the app
       - name: 🧱 Build project
         run: python build.py
 
-      # Determine the tag name used for release:
-      # - If triggered manually, use input
-      # - If triggered by tag push, extract it from GITHUB_REF
+      # Determine which tag to use for the release:
+      # - If the workflow was manually triggered, use the provided input tag_name
+      # - Otherwise, extract the tag from the GitHub ref for a tag push event
       - name: 🆔 Determine tag name
         id: tag
         shell: bash
@@ -51,6 +51,7 @@ jobs:
             echo "TAG_NAME=${GITHUB_REF##*/}" >> "$GITHUB_ENV"
           fi
 
+      # Rename the generated executable to include the OS platform suffix for clarity and easier distribution
       - name: 🔀 Rename build artifact with platform suffix
         shell: bash
         run: |
@@ -62,7 +63,7 @@ jobs:
             mv dist/LoginApp dist/LoginApp-linux
           fi
 
-      # Create a GitHub release and upload the built file(s) from /dist
+      # Create a GitHub release using the determined tag and upload the renamed build artifacts
       - name: 🚀 Create GitHub Release
         if: env.TAG_NAME != ''
         uses: softprops/action-gh-release@v2

@@ -1,31 +1,32 @@
 # 🔐 Headless Auto Login Script
 
 A minimal Python script using [Playwright](https://playwright.dev/python/) to automate login via headless browser
-(Chromium) to any website that uses a standard username/password form.
+(WebKit) to any website that uses a standard username/password form.
 
 ---
 
 ## 📁 Repository contents
 
--   `login.py` – Main script that performs the automated login
--   `requirements.txt` – Python dependencies
--   `.github/workflows/release.yml` – GitHub Actions workflow for release automation
--   `README.md` – This file
+- `login.py` – Main script that performs the automated login.
+- `build.py` – Build script to create standalone executables with PyInstaller.
+- `requirements.txt` – Python dependencies.
+- `.github/workflows/release.yml` – GitHub Actions workflow for multi-OS release automation.
+- `README.md` – Project documentation (this file).
 
 ---
 
 ## ⚙️ Requirements
 
--   **Python 3.10 or higher** installed on your system
--   **Internet connection** (required once to download Playwright browser binaries)
--   Optional but **recommended**: Use a Python virtual environment (`venv`) to isolate dependencies and avoid version
-    conflicts
+- **Python 3.10 or higher** installed on your system.
+- **Internet connection** (required once to download Playwright browser binaries).
+- Optional but **recommended**: Use a Python virtual environment (`venv`) to isolate dependencies and avoid version conflicts.
+- Playwright version **1.44 or higher**.
 
 ---
 
 ## 🛠️ Installation
 
-1. (Optional) Create and activate a virtual environment to keep dependencies isolated:
+1. (Optional) Create and activate a virtual environment to isolate dependencies:
 
 ```bash
 python -m venv venv
@@ -35,45 +36,73 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-2. Install the Python dependencies:
+2. Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Install Playwright browsers (Chromium):
+3. Install Playwright browsers (WebKit):
 
 ```bash
-playwright install
+playwright install webkit
 ```
 
-> This will install all dependencies and download a clean instance of Chromium for automated, isolated usage.
+> Note: The build script (`build.py`) also automates this step, downloading and bundling Playwright browsers in a custom folder `.playwright-browsers`.
 
 ---
 
-## ▶️ Usage
+## 🧱 Building a Standalone Executable
+
+You can build a single executable file for your platform using the included `build.py` script. It will:
+
+- Create and/or reuse a virtual environment.
+- Install necessary Python packages (PyInstaller and Playwright).
+- Download Playwright browser binaries into `.playwright-browsers`.
+- Package the `login.py` script into a standalone executable using PyInstaller.
+- Clean previous build artifacts when needed.
+
+### Usage
+
+- Build the project:
+
+```bash
+python build.py
+```
+
+- Clean previous build artifacts:
+
+```bash
+python build.py clean
+```
+
+The built executable will be located in the `dist/` directory.
+
+---
+
+## ▶️ Running the Login Automation
+
+Run the login automation script directly:
 
 ```bash
 python login.py
 ```
 
--   If no config file is found, the script will:
-
-    -   Prompt you to enter:
-        -   The target login URL
-        -   Selectors for username, password, and login button
-    -   Optionally ask if you'd like to save the credentials in **plain text** within the JSON file (locally only).
-
--   On next runs, the script will reuse this configuration.
+Or, run the standalone executable if you built it.
 
 ---
 
-## 📄 Configuration JSON
+## ⚙️ Configuration JSON
 
-The script uses a JSON file to store configuration data and optionally credentials. This file is created automatically
-if not found.
+The script uses a JSON file (`credentials.json` by default) to store configuration and optionally credentials.
 
-### JSON Structure
+If the file does not exist, you will be prompted to create it with:
+
+- Target login URL
+- CSS selectors for username field, password field, login button, and login success confirmation
+- Optionally save your username and password in plaintext inside the JSON file
+
+### Example configuration structure
 
 ```json
 {
@@ -81,7 +110,8 @@ if not found.
 	"selectors": {
 		"username_field": "#username",
 		"password_field": "#password",
-		"login_button": "#login-btn"
+		"login_button": "#login-btn",
+		"login_successfull": "Welcome"
 	},
 	"credentials": {
 		"save": true,
@@ -91,24 +121,35 @@ if not found.
 }
 ```
 
--   `url`: The login page URL.
--   `selectors`: CSS selectors for the username input, password input, and login button.
--   `credentials.save`: Boolean indicating whether to save credentials.
--   `credentials.username` and `credentials.password`: Stored only if `save` is true.  
-    **Credentials are saved in plaintext locally — ensure your system’s security.**
-
-### Notes
-
--   If `credentials.save` is `false`, the script will prompt for username and password each run.
--   This design keeps the tool generic and user-configurable for any login page.
+- Credentials saved in plaintext — **make sure to secure your system and files**.
+- If you choose not to save credentials, the script will prompt for username and password each time it runs.
 
 ---
 
-## 🔐 Security
+## 🔐 Security Considerations
 
--   If saved, **credentials are stored unencrypted** in a local JSON file.
--   This behavior is clearly prompted before saving.
--   Login is performed using a **clean browser context** (no cache, cookies, or saved data).
+- Credentials stored **unencrypted** locally in JSON if you opt to save them.
+- Automated login uses a clean browser context with no cached data or cookies.
+- Use this tool responsibly and secure your credential files properly.
+- Avoid hardcoding sensitive data directly in code or repository.
+
+---
+
+## 🧪 Tested On
+
+- Playwright WebKit browser (headless mode)
+- Windows, Linux, and macOS (via GitHub Actions build workflow)
+
+---
+
+## 🚀 GitHub Actions Workflow
+
+This project includes a GitHub Actions workflow `.github/workflows/release.yml` that:
+
+- Builds standalone executables for Windows, Linux, and macOS when a git tag matching `v*.*.*` is pushed.
+- Allows manual workflow dispatch with a tag name input.
+- Renames build artifacts to include OS suffix.
+- Creates a GitHub release with the built executables attached.
 
 ---
 
@@ -116,40 +157,20 @@ if not found.
 
 This project is provided **as-is**, for **educational and demonstrative purposes only**.
 
-By using this software, you agree to the following:
+By using this software, you agree that:
 
--   You are **fully and solely responsible** for how you use this code.
--   The author **does not assume any responsibility** for any direct or indirect damage, loss of data, account
-    suspension, or other consequences resulting from the use or misuse of this code.
--   This project is **not affiliated with, endorsed by, or officially connected** to any third-party service, platform,
-    or institution, including those potentially configured through the external JSON file.
--   Any website, URL, or selector used by this script is **externalized and user-defined**, making this tool **generic
-    and not tied to any specific platform**.
--   If you choose to store your login credentials, they are saved in a local **plaintext JSON file**. It is your
-    responsibility to ensure the security of your system and files.
+- You are solely responsible for how you use this code.
+- The author is not liable for any damage, loss, or account issues caused by usage.
+- This project is not affiliated with or endorsed by any third-party service or platform.
+- You comply with the terms of service of any platform you automate with this tool.
+- You secure any sensitive information stored locally.
 
-### You are solely responsible for:
-
--   Complying with the Terms of Service and acceptable use policies of any service you use this tool with.
--   Securing any sensitive data and avoiding credential leakage.
--   Not using this tool in any way that violates laws or regulations in your country or jurisdiction.
-
-> **If you do not agree with these terms, do not use this software.**
-
-## 🧪 Tested On
-
--   Chromium (via Playwright)
--   Windows / Linux
-
----
-
-## 📦 GitHub Actions
-
-The included GitHub workflow builds and publishes releases automatically when a new version is pushed with a Git tag.
+If you do not agree with these terms, do not use this software.
 
 ---
 
 ## 📝 License
 
-MIT – you're free to use, modify, and distribute this script.  
-Please avoid hardcoding or distributing sensitive URLs or login data publicly.
+MIT License — free to use, modify, and distribute.
+
+Please avoid sharing sensitive credentials or URLs publicly.
