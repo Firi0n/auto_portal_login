@@ -35,8 +35,11 @@ jobs:
 
       - name: Install Playwright browsers in a fixed folder
         run: |
-          mkdir -p ./browsers
-          PLAYWRIGHT_BROWSERS_PATH=./browsers python -m playwright install --with-deps
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            pwsh -Command "$env:PLAYWRIGHT_BROWSERS_PATH = './browsers'; python -m playwright install --with-deps"
+          else
+            PLAYWRIGHT_BROWSERS_PATH=./browsers python -m playwright install --with-deps
+          fi
 
       - name: Build executable with PyInstaller
         run: |
