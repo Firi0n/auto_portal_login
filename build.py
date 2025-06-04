@@ -28,25 +28,14 @@ class Build:
         """
         Determine the filesystem path where Playwright browser binaries are installed.
 
-        On Windows, this is typically located in:
-            %LOCALAPPDATA%\\ms-playwright
-
-        On Linux and macOS, this is usually:
-            ~/.cache/ms-playwright
+        In this version, we use a custom path (.playwright-browsers) to ensure consistency across systems.
 
         Returns:
             str or None: The absolute path if it exists, otherwise None.
         """
-        if sys.platform.startswith("win"):
-            local_app_data = os.getenv("LOCALAPPDATA")
-            if local_app_data:
-                path = os.path.join(local_app_data, "ms-playwright")
-                if os.path.exists(path):
-                    return path
-        else:
-            path = os.path.expanduser("~/.cache/ms-playwright")
-            if os.path.exists(path):
-                return path
+        path = os.path.abspath(".playwright-browsers")
+        if os.path.exists(path):
+            return path
         return None
 
     def __init__(self, venv_dir="venv", app_name="LoginApp", app_script="login.py", ico=""):
@@ -74,6 +63,9 @@ class Build:
         # Compute paths to Python and pip executables inside the virtual environment
         self.python_exe, self.pip_exe = self.get_python_pip_paths()
 
+        # Set custom path for Playwright browsers
+        self.playwright_browsers_path = os.path.abspath(".playwright-browsers")
+
     def get_python_pip_paths(self):
         """
         Construct the paths for Python and pip executables inside the virtual environment,
@@ -94,12 +86,12 @@ class Build:
         Specifically removes 'dist' and 'build' folders, as well as the PyInstaller spec file.
         """
         print("\n🧹 Cleaning previous build artifacts if any...")
-        for folder in ("dist", "build"):
+        for folder in ("dist", "build", self.playwright_browsers_path):
             if os.path.exists(folder):
                 print(f"    - Removing folder: {folder}")
                 shutil.rmtree(folder)
 
-        spec_file = os.path.splitext(self.app_script)[0] + ".spec"
+        spec_file = self.app_name + ".spec"
         if os.path.exists(spec_file):
             print(f"    - Removing spec file: {spec_file}")
             os.remove(spec_file)
@@ -134,9 +126,9 @@ class Build:
         self.run_cmd([self.pip_exe, "install", "pyinstaller", "playwright"])
 
         print("\n🌐 Installing Playwright browser binaries (webkit)...")
-        self.run_cmd([self.python_exe, "-m", "playwright", "install", "webkit"])
-
-        self.clean()
+        env = os.environ.copy()
+        env["PLAYWRIGHT_BROWSERS_PATH"] = self.playwright_browsers_path
+        self.run_cmd([self.python_exe, "-m", "playwright", "install", "webkit"], env=env)
 
         # Get path to Playwright browsers folder to bundle with the app
         playwright_browsers_path = self.get_playwright_browsers_path()

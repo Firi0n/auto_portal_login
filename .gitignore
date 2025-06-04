@@ -4,6 +4,7 @@ venv/
 # PyInstaller output folders
 dist/
 build/
+.playwright-browsers/
 
 # PyInstaller spec file
 *.spec
