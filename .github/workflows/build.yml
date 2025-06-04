@@ -57,12 +57,10 @@ jobs:
         shell: bash
         run: |
           cd dist
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            zip -r login-windows.zip login-windows
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            zip -r login-linux.zip login-linux
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            zip -r login-macos.zip login-macos
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            powershell Compress-Archive -Path login-windows\* -DestinationPath login-windows.zip
+          else
+            zip -r login-${{ matrix.os }}.zip login-${{ matrix.os }}
           fi
 
       - name: Upload to GitHub Release
