@@ -66,7 +66,7 @@ class Build:
         # Detect operating system platform and set flags accordingly
         self.platform = sys.platform
         self.is_win = self.platform.startswith("win")
-        print(f"🌐 Detected platform: {self.platform}")
+        print(f"\U0001f310 Detected platform: {self.platform}")
 
         # Define virtual environment directory
         self.venv_dir = venv_dir
