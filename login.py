@@ -161,5 +161,10 @@ if __name__ == "__main__":
         base_path = pathlib.Path(sys._MEIPASS)
         os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(base_path / "ms-playwright")
 
-    login = Login("credentials.json")
-    login.start()
+    try:
+        login = Login("credentials.json")
+        login.start()
+    except KeyboardInterrupt:
+        print("\n👋 Keyboard interrupt received. Exiting cleanly.")
+        sys.exit(0)
+
