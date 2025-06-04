@@ -38,7 +38,7 @@ class Build:
             return path
         return None
 
-    def __init__(self, venv_dir="venv", app_name="LoginApp", app_script="login.py", ico="icon.svg"):
+    def __init__(self, venv_dir="venv", app_name="LoginApp", app_script="login.py", ico="icon.png"):
         """
         Initialize the build configuration and environment.
 
