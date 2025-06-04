@@ -46,6 +46,8 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH=./browsers python -m playwright install --with-deps
 
       - name: Build executable with PyInstaller
+        env:
+          PYINSTALLER_SKIP_CODE_SIGNING: 1
         run: |
           pyinstaller --onedir --collect-all playwright --add-data "browsers:browsers" login.py
 
