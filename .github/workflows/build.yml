@@ -24,7 +24,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest] # Define OS matrix for cross-platform builds
 
     steps:
-
       # Checkout the source code from the repository
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
@@ -44,6 +43,7 @@ jobs:
       # - If triggered by tag push, extract it from GITHUB_REF
       - name: 🆔 Determine tag name
         id: tag
+        shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> "$GITHUB_ENV"
