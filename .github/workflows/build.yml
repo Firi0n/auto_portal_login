@@ -33,13 +33,14 @@ jobs:
           pip install -r requirements.txt  # Install Python dependencies from requirements.txt
           pip install pyinstaller          # Install PyInstaller to build executables
 
-      - name: Install Playwright browsers
+      - name: Install Playwright browsers in a fixed folder
         run: |
-          python -m playwright install --with-deps  # Download and install Playwright browsers with dependencies
+          mkdir -p ./browsers
+          PLAYWRIGHT_BROWSERS_PATH=./browsers python -m playwright install --with-deps
 
-      - name: Build executable (onedir)
+      - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onedir --collect-all playwright login.py  # Build executable as folder including Playwright files
+          pyinstaller --onedir --collect-all playwright --add-data "browsers;browsers" login.py
 
       - name: Rename dist folder for ${{ matrix.os }}
         shell: bash
