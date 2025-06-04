@@ -47,7 +47,7 @@ jobs:
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onedir --collect-all playwright --add-data "browsers;browsers" login.py
+          pyinstaller --onedir --collect-all playwright --add-data "browsers:browsers" login.py
 
       - name: Rename dist folder for ${{ matrix.os }}
         shell: bash
