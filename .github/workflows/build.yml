@@ -1,95 +1,59 @@
-name: Build PyInstaller Executables
+name: Build and Release
 
 on:
+  # Trigger on tag push (e.g., v1.0.0)
   push:
     tags:
-      - "v*" # Trigger on tag pushes like v1.0.0
+      - "v*.*.*"
+
+  # Allow manual trigger with a required input
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Tag name for the release (e.g. v1.0.0)"
+      tag_name:
+        description: "Tag version (e.g., v1.2.3)"
         required: true
-        default: "v1.0.0"
 
 jobs:
   build:
+    name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest] # Build matrix for Linux, Windows, and macOS
+        os: [ubuntu-latest, windows-latest, macos-latest] # Define OS matrix for cross-platform builds
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3 # Checkout the repository code
+      # Checkout the source code from the repository
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      # Set up the desired Python version
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10" # Set up Python 3.10 environment
+          python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt  # Install Python dependencies from requirements.txt
-          pip install pyinstaller          # Install PyInstaller to build executables
+      # Run the custom Python build script (creates venv, installs deps, builds app)
+      - name: 🧱 Build project
+        run: python build.py
 
-      - name: Install Playwright browsers on Windows
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
+      # Determine the tag name used for release:
+      # - If triggered manually, use input
+      # - If triggered by tag push, extract it from GITHUB_REF
+      - name: 🆔 Determine tag name
+        id: tag
         run: |
-          $env:PLAYWRIGHT_BROWSERS_PATH = "./browsers"
-          python -m playwright install --with-deps
-
-      - name: Install Playwright browsers on Linux/macOS
-        if: matrix.os != 'windows-latest'
-        run: |
-          PLAYWRIGHT_BROWSERS_PATH=./browsers python -m playwright install --with-deps
-
-      - name: Build executable with PyInstaller on macOS
-        if: matrix.os == 'macos-latest'
-        env:
-          PYINSTALLER_SKIP_CODE_SIGNING: 1
-        run: |
-          pyinstaller --onedir --collect-all playwright login.py
-
-      - name: Copy browsers folder on macOS
-        if: matrix.os == 'macos-latest'
-        run: |
-          cp -r browsers dist/login/browsers
-
-      - name: Build executable with PyInstaller on Linux/Windows
-        if: matrix.os != 'macos-latest'
-        run: |
-          pyinstaller --onedir --collect-all playwright --add-data "browsers:browsers" login.py
-
-      - name: Rename dist folder for ${{ matrix.os }}
-        shell: bash
-        run: |
-          # Rename the output folder depending on OS for clarity
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv dist/login dist/login-windows
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            mv dist/login dist/login-linux
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            mv dist/login dist/login-macos
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> "$GITHUB_ENV"
+          else
+            echo "TAG_NAME=${GITHUB_REF##*/}" >> "$GITHUB_ENV"
           fi
 
-      - name: Create zip archive
-        shell: bash
-        run: |
-          cd dist
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            powershell Compress-Archive -Path login-windows\* -DestinationPath login-windows.zip
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            zip -r login-linux.zip login-linux
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            zip -r login-macos.zip login-macos
-          fi
-
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+      # Create a GitHub release and upload the built file(s) from /dist
+      - name: 🚀 Create GitHub Release
+        if: env.TAG_NAME != ''
+        uses: softprops/action-gh-release@v2
         with:
-          files: dist/login-*.zip # Upload all zip files created for different OSes
-          tag_name: ${{ github.event_name == 'push' && github.ref_name || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag) }} # Use tag from push or manual input
-          token: ${{ secrets.GITHUB_TOKEN }} # GitHub token to authorize the release upload
+          tag_name: ${{ env.TAG_NAME }}
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

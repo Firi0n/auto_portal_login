@@ -1,105 +1,165 @@
 import json
 import os
 import getpass
-import time
-from playwright.sync_api import sync_playwright
+import sys
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
 
 class Login:
 
-    # Prompt the user for a yes/no answer, returning a boolean
+    def __init__(self, json_filename):
+        self.json_filename = json_filename
+        self.data = {}
+        self.load_or_create_config()
+
+    def load_or_create_config(self):
+        """
+        Load the JSON configuration file if it exists,
+        otherwise prompt user to create one.
+        """
+        if not os.path.exists(self.json_filename):
+            print(f"⚙️ Configuration file '{self.json_filename}' not found. Creating a new one...")
+            self.create_json(self.json_filename)
+
+        try:
+            with open(self.json_filename, "r") as f:
+                self.data = json.load(f)
+        except json.JSONDecodeError:
+            print(f"❌ Error: Configuration file '{self.json_filename}' is corrupted or not valid JSON.")
+            sys.exit(1)
+
     @staticmethod
     def ask_yes_no(prompt):
+        """
+        Prompt user with a yes/no question and return True/False accordingly.
+        """
         while True:
             answer = input(f"{prompt} [y/n]: ").strip().lower()
-            if answer == 'y':
+            if answer in ('y', 'yes'):
                 return True
-            elif answer == 'n':
+            elif answer in ('n', 'no'):
                 return False
             else:
                 print("Invalid input. Please type 'y' for yes or 'n' for no.")
 
-    # Create the JSON config file if it doesn't exist
     def create_json(self, json_filename):
-        url = input("Enter url: ")
-        username_field = input("Enter username field selector: ")
-        password_field = input("Enter password field selector: ")
-        login_button = input("Enter login button selector: ")
-        save_username_password = self.ask_yes_no(
-            "Save username and password in plain text (visible) inside the JSON file?"
+        """
+        Prompt user for configuration details and save to a JSON file.
+        """
+        print("Please provide the following details to create your configuration:")
+
+        url = input("Enter URL: ").strip()
+        username_field = input("Enter username field CSS selector: ").strip()
+        password_field = input("Enter password field CSS selector: ").strip()
+        login_button = input("Enter login button CSS selector: ").strip()
+        login_success_selector = input("Enter login success confirmation selector or text: ").strip()
+
+        save_credentials = self.ask_yes_no(
+            "Save username and password in plain text inside the JSON file?"
         )
 
-        # Build configuration structure
-        json_structure = {
+        credentials = {"save": save_credentials}
+        if save_credentials:
+            username = input("Enter username: ").strip()
+            password = getpass.getpass("Enter password: ")
+            credentials.update({"username": username, "password": password})
+
+        config = {
             "url": url,
             "selectors": {
                 "username_field": username_field,
                 "password_field": password_field,
-                "login_button": login_button
+                "login_button": login_button,
+                "login_successfull": login_success_selector
             },
-            "credentials": {
-                "save": save_username_password
-            }
+            "credentials": credentials
         }
 
-        # If user wants to save credentials, collect them
-        if save_username_password:
-            username = input("Enter username: ")
-            password = getpass.getpass("Enter password: ")
-            json_structure["credentials"]["username"] = username
-            json_structure["credentials"]["password"] = password
+        try:
+            with open(json_filename, "w") as f:
+                json.dump(config, f, indent=4)
+            print(f"✅ Configuration saved to '{json_filename}'.")
+        except IOError as e:
+            print(f"❌ Failed to write configuration file: {e}")
+            sys.exit(1)
 
-        # Save configuration to file
-        with open(json_filename, "w") as f:
-            json.dump(json_structure, f, indent=4)
-
-    # Initialize: create or load the JSON config
-    def __init__(self, json_filename):
-        if not os.path.exists(json_filename):
-            self.create_json(json_filename)
-        with open(json_filename, "r") as f:
-            self.data = json.load(f)
-
-    # Main automation logic
-    def start(self):
-        # Get credentials (from file or user input)
-        if self.data["credentials"]["save"]:
-            username = self.data["credentials"]["username"]
-            password = self.data["credentials"]["password"]
+    def get_credentials(self):
+        """
+        Return a tuple (username, password) either from config file
+        or prompting user input if not saved.
+        """
+        creds = self.data.get("credentials", {})
+        if creds.get("save", False):
+            username = creds.get("username")
+            password = creds.get("password")
+            if username is None or password is None:
+                print("❌ Error: Credentials marked as saved but missing from config.")
+                sys.exit(1)
         else:
-            username = input("Enter username: ")
+            username = input("Enter username: ").strip()
             password = getpass.getpass("Enter password: ")
+        return username, password
 
-        with sync_playwright() as p:
-            # Launch browser in headless mode (no GUI)
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context()  # Fresh session with no cache or cookies
-            page = context.new_page()
-            page.goto(self.data["url"])
+    def automate_login(self):
+        """
+        Perform the automated login using Playwright, handling exceptions.
+        """
+        username, password = self.get_credentials()
 
-            # Wait for page load to complete
-            page.wait_for_load_state("networkidle")
+        print("\n🚀 Starting browser automation...")
 
-            # Fill in login form and submit
-            page.fill(self.data["selectors"]["username_field"], username)
-            page.fill(self.data["selectors"]["password_field"], password)
-            page.click(self.data["selectors"]["login_button"])
+        try:
+            with sync_playwright() as p:
+                browser = p.webkit.launch(headless=True)
+                context = browser.new_context()
+                page = context.new_page()
 
-            # Wait a few seconds after submitting
-            page.wait_for_timeout(5000)
+                print(f"➡️ Navigating to {self.data['url']}...")
+                page.goto(self.data["url"])
+                page.wait_for_load_state("networkidle")
 
-            # Simple success check based on presence of "logout" in page content
-            page_content = page.content().lower()
-            if "logout" in page_content:
-                print("✅ Login successful!")
-            else:
-                print("❌ Login failed or not recognized.")
+                print("🔑 Filling in login form...")
+                page.fill(self.data["selectors"]["username_field"], username)
+                page.fill(self.data["selectors"]["password_field"], password)
+                page.click(self.data["selectors"]["login_button"])
 
-            # Clean up browser context
-            context.close()
-            browser.close()
+                print("⏳ Waiting for login to process...")
+                page.wait_for_timeout(5000)
 
+                content = page.content().lower()
+                success_indicator = self.data["selectors"]["login_successfull"].lower()
 
-# Entry point
+                if success_indicator in content:
+                    print("✅ Login successful!")
+                else:
+                    print("❌ Login failed or login success indicator not found.")
+
+                context.close()
+                browser.close()
+
+        except PlaywrightTimeoutError:
+            print("❌ Timeout while waiting for page elements or navigation.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ Unexpected error occurred during browser automation: {e}")
+            sys.exit(1)
+
+    def start(self):
+        """
+        Entry point to start the login automation process.
+        """
+        try:
+            self.automate_login()
+        except KeyboardInterrupt:
+            print("\n🚪 Process interrupted by user. Exiting.")
+            sys.exit(0)
+
 if __name__ == "__main__":
+    # If running as a frozen executable, set PLAYWRIGHT_BROWSERS_PATH to bundled directory
+    if getattr(sys, 'frozen', False):
+        import pathlib
+        base_path = pathlib.Path(sys._MEIPASS)
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(base_path / "ms-playwright")
+
     login = Login("credentials.json")
     login.start()
