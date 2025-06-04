@@ -1,8 +1,5 @@
 name: Build PyInstaller Executables
 
-# Trigger the workflow on:
-# - Pushes of tags that match "v*" (e.g., v1.0, v2.3)
-# - Manual triggers via the GitHub UI
 on:
   push:
     tags:
@@ -14,7 +11,6 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
-    # Define a build matrix for multiple OSes: Linux, Windows, macOS
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -42,14 +38,26 @@ jobs:
         run: |
           python -m playwright install --with-deps
 
-      # Step 5: Use PyInstaller to build a single-file executable from login.py
+      # Step 5: Build a single-file executable from login.py
       - name: Build executable
         run: |
-          pyinstaller --onefile login.py
+          pyinstaller --onefile --collect-all playwright login.py
 
-      # Step 6: Upload the built executable as an artifact to the GitHub workflow run
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      # Step 6: Rename executable to include OS in filename
+      - name: Rename executable for ${{ matrix.os }}
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv dist/login.exe dist/login-windows.exe
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            mv dist/login dist/login-linux
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            mv dist/login dist/login-macos
+          fi
+
+      # Step 7: Upload the built executable to GitHub Release
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: login-${{ matrix.os }}
-          path: dist/login*
+          files: |
+            dist/login-*
