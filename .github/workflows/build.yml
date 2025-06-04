@@ -24,6 +24,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest] # Define OS matrix for cross-platform builds
 
     steps:
+      - name: Check Playwright cache folder
+        if: matrix.os == 'macos-latest'
+        run: ls -la ~/.cache/ms-playwright
+
       # Checkout the source code from the repository
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
