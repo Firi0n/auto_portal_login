@@ -3,7 +3,6 @@ import sys
 import subprocess
 import shutil
 
-
 class Build:
 
     @staticmethod
@@ -38,7 +37,7 @@ class Build:
             return path
         return None
 
-    def __init__(self, venv_dir="venv", app_name="LoginApp", app_script="login.py", ico="icon.png"):
+    def __init__(self, venv_dir="venv", app_name="LoginApp", app_script="login.py", ico="icon"):
         """
         Initialize the build configuration and environment.
 
@@ -161,7 +160,10 @@ class Build:
 
         # Add icon parameter only if an icon path is specified
         if self.ico:
-            pyinstaller_cmd.extend(["--icon", self.ico])
+            ext = ".svg"
+            if self.is_win:
+                ext = ".ico"
+            pyinstaller_cmd.extend(["--icon", self.ico+ext])
 
         # Append the main application script at the end
         pyinstaller_cmd.append(self.app_script)
