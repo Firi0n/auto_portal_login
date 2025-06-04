@@ -27,27 +27,39 @@ class Build:
     def get_playwright_browsers_path():
         """
         Determine the filesystem path where Playwright browser binaries are installed.
-
-        On Windows, this is typically located in:
-            %LOCALAPPDATA%\\ms-playwright
-
-        On Linux and macOS, this is usually:
-            ~/.cache/ms-playwright
-
+        On Windows, usually in %LOCALAPPDATA%\ms-playwright
+        On Linux/macOS, usually ~/.cache/ms-playwright
+    
         Returns:
             str or None: The absolute path if it exists, otherwise None.
         """
+        candidates = []
         if sys.platform.startswith("win"):
             local_app_data = os.getenv("LOCALAPPDATA")
             if local_app_data:
-                path = os.path.join(local_app_data, "ms-playwright")
-                if os.path.exists(path):
-                    return path
+                candidates.append(os.path.join(local_app_data, "ms-playwright"))
+            # Also try USERPROFILE in case LOCALAPPDATA missing or different
+            user_profile = os.getenv("USERPROFILE")
+            if user_profile:
+                candidates.append(os.path.join(user_profile, ".cache", "ms-playwright"))
         else:
-            path = os.path.expanduser("~/.cache/ms-playwright")
+            # Linux/macOS typical cache path
+            candidates.append(os.path.expanduser("~/.cache/ms-playwright"))
+            # Sometimes it could be in XDG_CACHE_HOME env var
+            xdg_cache = os.getenv("XDG_CACHE_HOME")
+            if xdg_cache:
+                candidates.append(os.path.join(xdg_cache, "ms-playwright"))
+    
+        print("Looking for Playwright browsers folder in these locations:")
+        for path in candidates:
+            print(f"  - {path}")
             if os.path.exists(path):
+                print(f"    Found Playwright browsers folder at: {path}")
                 return path
+    
+        print("❌ Playwright browsers folder not found in any known location.")
         return None
+
 
     def __init__(self, venv_dir="venv", app_name="LoginApp", app_script="login.py", ico=""):
         """
@@ -66,7 +78,7 @@ class Build:
         # Detect operating system platform and set flags accordingly
         self.platform = sys.platform
         self.is_win = self.platform.startswith("win")
-        print(f"\U0001f310 Detected platform: {self.platform}")
+        print(f"🌐 Detected platform: {self.platform}")
 
         # Define virtual environment directory
         self.venv_dir = venv_dir
