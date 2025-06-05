@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import shutil
+from pathlib import Path
 
 class Build:
 
@@ -178,7 +179,7 @@ def main():
     """
     Parse command line arguments and either clean previous builds or execute build process.
     """
-    build = Build("venv")
+    build = Build(venv_dir = "venv", ico = str(Path("icons") / "icon"))
     if len(sys.argv) > 1 and sys.argv[1].lower() == "clean":
         build.clean()
     else:

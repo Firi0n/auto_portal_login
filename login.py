@@ -2,13 +2,14 @@ import json
 import os
 import getpass
 import sys
+import pathlib
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 
 class Login:
 
-    def __init__(self, json_filename):
-        self.json_filename = json_filename
+    def __init__(self, json_path):
+        self.json_path = json_path
         self.data = {}
         self.load_or_create_config()
 
@@ -17,15 +18,15 @@ class Login:
         Load the JSON configuration file if it exists,
         otherwise prompt user to create one.
         """
-        if not os.path.exists(self.json_filename):
-            print(f"⚙️ Configuration file '{self.json_filename}' not found. Creating a new one...")
-            self.create_json(self.json_filename)
+        if not os.path.exists(self.json_path):
+            print(f"⚙️ Configuration file '{os.path.basename(self.json_path)}' not found. Creating a new one...")
+            self.create_json(self.json_path)
 
         try:
-            with open(self.json_filename, "r") as f:
+            with open(self.json_path, "r") as f:
                 self.data = json.load(f)
         except json.JSONDecodeError:
-            print(f"❌ Error: Configuration file '{self.json_filename}' is corrupted or not valid JSON.")
+            print(f"❌ Error: Configuration file '{self.json_path}' is corrupted or not valid JSON.")
             sys.exit(1)
 
     @staticmethod
@@ -42,7 +43,7 @@ class Login:
             else:
                 print("Invalid input. Please type 'y' for yes or 'n' for no.")
 
-    def create_json(self, json_filename):
+    def create_json(self, json_path):
         """
         Prompt user for configuration details and save to a JSON file.
         """
@@ -76,9 +77,9 @@ class Login:
         }
 
         try:
-            with open(json_filename, "w") as f:
+            with open(json_path, "w") as f:
                 json.dump(config, f, indent=4)
-            print(f"✅ Configuration saved to '{json_filename}'.")
+            print(f"✅ Configuration saved to '{json_path}'.")
         except IOError as e:
             print(f"❌ Failed to write configuration file: {e}")
             sys.exit(1)
@@ -157,12 +158,14 @@ class Login:
 if __name__ == "__main__":
     # If running as a frozen executable, set PLAYWRIGHT_BROWSERS_PATH to bundled directory
     if getattr(sys, 'frozen', False):
-        import pathlib
         base_path = pathlib.Path(sys._MEIPASS)
+        json_path = pathlib.Path(sys.executable).parent
         os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(base_path / "ms-playwright")
-
+    else:
+        json_path = pathlib.Path(__file__).parent
+    json_path = json_path / "credentials.json"
     try:
-        login = Login("credentials.json")
+        login = Login(str(json_path))
         login.start()
     except KeyboardInterrupt:
         print("\n👋 Keyboard interrupt received. Exiting cleanly.")
